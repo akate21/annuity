@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#c0392b">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Калькулятор пенсионного аннуитета — Казахстан</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root {
+  --accent: #c0392b;
+  --accent-light: #e74c3c;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --card-border: rgba(0,0,0,0.06);
+  --separator: rgba(60,60,67,0.12);
+  --label: #3c3c43;
+  --label2: #8e8e93;
+  --green: #34c759;
+  --green-bg: #d4f5dc;
+  --yellow: #ff9f0a;
+  --yellow-bg: #fff3cd;
+  --red: #ff3b30;
+  --red-bg: #ffd4d1;
+  --radius: 12px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', Roboto, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: #1c1c1e;
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  padding-bottom: calc(140px + var(--safe-bottom));
+}
+
+.app { max-width: 700px; margin: 0 auto; padding: 0; }
+
+/* ─── Header ─── */
+.header {
+  background: var(--accent);
+  color: #fff;
+  padding: calc(12px + var(--safe-top)) 16px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+.header .ver { font-size: 12px; opacity: .7; }
+
+/* ─── Cards ─── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  margin: 12px 16px;
+  overflow: hidden;
+  box-shadow: 0 0 0 0.5px var(--card-border), 0 1px 3px rgba(0,0,0,0.04);
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 24px 16px 6px;
+  margin: 0 16px;
+}
+.card-title:first-child { padding-top: 8px; }
+
+/* ─── Rows ─── */
+.row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  gap: 8px;
+  border-bottom: 0.5px solid var(--separator);
+}
+.row:last-child { border-bottom: none; }
+.row label {
+  flex: 1;
+  font-size: 15px;
+  color: var(--label);
+  line-height: 1.3;
+  padding: 10px 0;
+}
+.row label.small { font-size: 13px; color: var(--label2); }
+.row label b { font-weight: 600; color: #1c1c1e; }
+.row .val {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1c1c1e;
+  text-align: right;
+  white-space: nowrap;
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+}
+.row .val.highlight {
+  background: var(--yellow-bg);
+  color: #7a5d00;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.row .val.green {
+  background: var(--green-bg);
+  color: #1a7a2e;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.row .val.red {
+  background: var(--red-bg);
+  color: var(--red);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+/* ─── Inputs ─── */
+.row input[type="text"],
+.row input[type="number"],
+.row select {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent);
+  text-align: right;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.row input.date-input {
+  width: 120px;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+.row input.money-input {
+  width: 140px;
+}
+.row input[type="number"] { width: 80px; }
+.row select {
+  color: var(--accent);
+  background: transparent;
+  padding-right: 4px;
+  max-width: 200px;
+  text-align: right;
+  direction: rtl;
+}
+.row select option { direction: ltr; color: #1c1c1e; }
+.row input:focus, .row select:focus {
+  color: var(--accent-light);
+}
+
+/* ─── Sub-row indent ─── */
+.row.sub { padding-left: 32px; }
+.row.sub label { font-size: 14px; color: var(--label2); }
+
+/* ─── Params panel ─── */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--accent);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  border-bottom: 0.5px solid var(--separator);
+}
+.settings-btn::before { content: '⚙'; font-size: 16px; }
+.settings-body { display: none; }
+.settings-body.open { display: block; }
+.settings-body .row label { font-size: 14px; color: var(--label2); }
+.settings-body .row input { color: var(--label2); font-size: 14px; }
+.note-text {
+  padding: 8px 16px 12px;
+  font-size: 11px;
+  color: var(--label2);
+  line-height: 1.4;
+}
+
+/* ─── Result sticky bar ─── */
+.result-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(255,255,255,0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-top: 0.5px solid var(--separator);
+  padding: 10px 16px calc(10px + var(--safe-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.result-bar .r-block { display: flex; flex-direction: column; gap: 2px; }
+.result-bar .r-label {
+  font-size: 11px;
+  color: var(--label2);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.result-bar .r-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a7a2e;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+.result-bar .r-val.insufficient {
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 600;
+}
+.result-bar .r-val-div {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+.result-bar .r-spacer { flex: 1; }
+.result-bar .r-actions { display: flex; gap: 8px; align-items: center; }
+
+.btn-icon {
+  width: 36px; height: 36px;
+  border-radius: 18px;
+  background: var(--bg);
+  border: none;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--accent);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-icon:active { opacity: 0.6; }
+
+/* ─── FIO row in result ─── */
+.fio-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px 0 0;
+}
+.fio-row input {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--label);
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 10px 16px;
+  flex: 1;
+  min-width: 0;
+}
+.fio-row input:focus { color: var(--accent); }
+
+/* ─── Result text block ─── */
+.result-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  color: #1c1c1e;
+  padding: 10px 0 14px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+body.tg-webapp .result-text { color: var(--label); }
+
+/* ─── Calculate button (mobile) ─── */
+.calc-btn-wrap {
+  padding: 12px 16px 4px;
+}
+.calc-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.calc-btn:active { opacity: 0.7; }
+
+/* ─── Desktop (>700px): 2-column ─── */
+@media (min-width: 701px) {
+  .calc-btn-wrap { display: none; }
+  .app { max-width: 1100px; }
+  .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .columns .col { min-width: 0; }
+  .result-bar {
+    position: fixed;
+    max-width: 1100px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  }
+  body { padding-bottom: 120px; }
+}
+
+/* ─── Telegram Web App ─── */
+body.tg-webapp .header { display: none; }
+body.tg-webapp { padding-bottom: 60px; }
+body.tg-webapp .result-bar { bottom: 0; }
+
+/* ─── Mobile refinements ─── */
+@media (max-width: 700px) {
+  .header h1 { font-size: 15px; }
+  .card { margin: 8px 12px; border-radius: 10px; }
+  .card-title { padding-left: 12px; margin: 0 12px; }
+  .row { padding: 0 12px; }
+  .row.sub { padding-left: 24px; }
+  .row input.money-input { width: 120px; }
+  .row select { max-width: 160px; font-size: 14px; }
+  .result-bar { padding: 8px 12px calc(8px + var(--safe-bottom)); gap: 6px; }
+  .result-bar .r-val { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Пенсионный аннуитет — РК</h1>
+    <span class="ver" id="buildVer">v1.2 (2026-04-15)</span>
+  </div>
+
+  <div class="columns">
+    <!-- ─── LEFT: Inputs ─── -->
+    <div class="col">
+      <div class="card-title">Данные для расчёта</div>
+      <div class="card">
+        <div class="row">
+          <label>Дата расчёта</label>
+          <input type="text" id="calcDate" class="date-input" value="14.04.2026" placeholder="ДД.ММ.ГГГГ" maxlength="10" inputmode="numeric">
+        </div>
+        <div class="row">
+          <label>Дата рождения</label>
+          <input type="text" id="birthDate" class="date-input" value="26.03.1968" placeholder="ДД.ММ.ГГГГ" maxlength="10" inputmode="numeric">
+        </div>
+        <div class="row">
+          <label>Пол</label>
+          <select id="gender">
+            <option value="female">Женщина</option>
+            <option value="male">Мужчина</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Вид выплат</label>
+          <select id="annuityType">
+            <option value="immediate_lifetime">Немедленный пожизн.</option>
+            <option value="deferred_lifetime">Отсроченный пожизн.</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Гарант. период, лет</label>
+          <input type="number" id="guaranteedPeriod" value="10" min="0" max="30" step="1" inputmode="numeric">
+        </div>
+        <div class="row">
+          <label>Физическое состояние</label>
+          <select id="physicalCondition">
+            <option value="none">Без инвалидности</option>
+            <option value="group1">1 группа</option>
+            <option value="group2">2 группа</option>
+            <option value="group3">3 группа</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card-title">Премия</div>
+      <div class="card">
+        <div class="row">
+          <label><b>Совокупная премия</b></label>
+          <span class="val highlight" id="totalPremiumDisplay">0</span>
+        </div>
+        <div class="row sub">
+          <label class="small">обязательные взносы</label>
+          <input type="text" id="mandatoryContrib" class="money-input" value="9 370 000" inputmode="numeric">
+        </div>
+        <div class="row sub">
+          <label class="small">добровольные взносы</label>
+          <input type="text" id="voluntaryContrib" class="money-input" value="0" inputmode="numeric">
+        </div>
+        <div class="row sub">
+          <label class="small">профессиональные взносы</label>
+          <input type="text" id="professionalContrib" class="money-input" value="0" inputmode="numeric">
+        </div>
+        <div class="row sub">
+          <label class="small">собственные средства</label>
+          <input type="text" id="ownFunds" class="money-input" value="0" inputmode="numeric">
+        </div>
+        <div class="row">
+          <label class="small">Выкупная из иных КСЖ</label>
+          <input type="text" id="surrenderFromOther" class="money-input" value="0" inputmode="numeric">
+        </div>
+        <div class="row">
+          <label>Из иной КСЖ (ОППВ)</label>
+          <select id="fromOtherOPPV">
+            <option value="no">Нет</option>
+            <option value="yes">Да</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="small">Мес. уплаченных ОППВ</label>
+          <input type="number" id="oppvMonths" value="0" min="0" step="1" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="settings-btn" id="settingsToggle">Параметры расчёта</div>
+        <div class="settings-body" id="settingsPanel">
+          <div class="row">
+            <label class="small">Ставка дисконтирования, %</label>
+            <input type="number" id="discountRate" value="9.0" min="0" max="30" step="0.1" inputmode="decimal">
+          </div>
+          <div class="row">
+            <label class="small">Индексация, %</label>
+            <input type="number" id="indexationRate" value="8.0" min="0" max="30" step="0.1" inputmode="decimal">
+          </div>
+          <div class="row">
+            <label class="small">Дивиденд, %</label>
+            <input type="number" id="dividendRate" value="11.0" min="0" max="30" step="0.1" inputmode="decimal">
+          </div>
+          <div class="row">
+            <label class="small">Расходы от премии (c), %</label>
+            <input type="number" id="expenseC" value="1.5" min="0" max="5" step="0.1" inputmode="decimal">
+          </div>
+          <div class="row">
+            <label class="small">Расходы от выплат (d), %</label>
+            <input type="number" id="expenseD" value="3.0" min="0" max="5" step="0.1" inputmode="decimal">
+          </div>
+          <div class="row">
+            <label class="small">Прожиточный минимум, тг</label>
+            <input type="number" id="livingWage" value="50851" min="0" step="1" inputmode="numeric">
+          </div>
+          <div class="note-text">
+            По Постановлению АРФР №45 от 07.06.2023
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RIGHT: Results ─── -->
+    <div class="col">
+      <div class="card-title">Результаты</div>
+      <div class="card">
+        <div class="row">
+          <label>Дата начала выплат</label>
+          <span class="val" id="startDate">—</span>
+        </div>
+        <div class="row">
+          <label>Возраст</label>
+          <span class="val" id="currentAge">—</span>
+        </div>
+        <div class="row" style="display:none">
+          <label>Мин. возраст аннуитета</label>
+          <span class="val" id="retirementAgeDisplay">—</span>
+        </div>
+        <div class="row">
+          <label>Возраст начала выплат</label>
+          <span class="val" id="ageAtStart">—</span>
+        </div>
+        <div class="row" id="deferralRow" style="display:none">
+          <label>Период отсрочки</label>
+          <span class="val" id="deferralDisplay">—</span>
+        </div>
+        <div class="row">
+          <label>Окончание выплат</label>
+          <span class="val" id="endDate">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <label><b>Недостаток средств</b></label>
+          <span class="val highlight" id="shortfall" style="font-size:15px">—</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <label class="small">индексация</label>
+          <span class="val" id="indexDisplay" style="font-size:14px">8,0%</span>
+        </div>
+        <div class="row">
+          <label class="small">дивиденд</label>
+          <span class="val" id="divDisplay" style="font-size:14px">11,0%</span>
+        </div>
+        <div class="row">
+          <label>Выкупная ч/з 2 года достаточна</label>
+          <span class="val" id="surrender2y">—</span>
+        </div>
+      </div>
+
+      <div class="row" style="display:none">
+        <label>Мин. ежемесячная выплата (70% ПМ)</label>
+        <span class="val" id="minPaymentDisplay">—</span>
+      </div>
+      <div class="row" style="display:none">
+        <label>Фактор (ä)</label>
+        <span class="val" id="annuityFactorDisplay">—</span>
+      </div>
+
+      <div class="card">
+        <div class="fio-row">
+          <input type="text" id="insuredName" value="Клиент" placeholder="ФИО Застрахованного">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <label><b>Итог</b></label>
+          <button class="btn-icon" onclick="copyResult()" title="Скопировать итог">📝</button>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <div class="result-text" id="resultText">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc-btn-wrap">
+    <button class="calc-btn" id="calcBtn" type="button" onclick="copyResult()">Скопировать</button>
+  </div>
+</div>
+
+<!-- ─── Sticky result bar ─── -->
+<div class="result-bar">
+  <div class="r-block" style="flex:1;min-width:0">
+    <span class="r-label">Ежемесячная выплата</span>
+    <span class="r-val" id="annuityPayment">—</span>
+  </div>
+  <div class="r-block">
+    <span class="r-label">Дивиденд</span>
+    <span class="r-val-div" id="dividendPayment">—</span>
+  </div>
+  <div class="r-actions">
+    <button class="btn-icon" onclick="sendToTelegram()" title="Отправить в чат" id="tgSendBtn" style="display:none">📨</button>
+    <button class="btn-icon" onclick="copyResult()" title="Скопировать итог" id="copyBtn">📝</button>
+    <button class="btn-icon" onclick="exportData()" title="Экспорт">📋</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════ Mortality Tables ═══════════ */
+var QX_MALE={45:0.00506324,46:0.00541322,47:0.00578732,48:0.00618720,49:0.00661461,50:0.00707133,51:0.00755957,52:0.00808139,53:0.00856150,54:0.00911608,55:0.00974127,56:0.01043421,57:0.01119231,58:0.01212124,59:0.01305795,60:0.01400278,61:0.01501191,62:0.01596719,63:0.01692128,64:0.01787294,65:0.01882189,66:0.01976891,67:0.02067111,68:0.02161884,69:0.02256598,70:0.02351273,71:0.02551640,72:0.02781936,73:0.03048121,74:0.03357435,75:0.03718733,76:0.03942173,77:0.04240343,78:0.04527532,79:0.04833681,80:0.05159970,81:0.05507533,82:0.05877769,83:0.06272054,84:0.06691831,85:0.07138613,86:0.07613984,87:0.08119598,88:0.08657181,89:0.09325468,90:0.10149249,91:0.11160518,92:0.12400550,93:0.13922717,94:0.15632075,95:0.17551690,96:0.19707469,97:0.22128032,98:0.24847002,99:0.27900683,100:0.31330354,101:0.35182396,102:0.39508920,103:0.44368478,104:0.49826864,105:0.55958003,106:0.62844965,107:0.70582143,108:0.79272471,109:0.87892804,110:1.0};
+var QX_FEMALE={45:0.00105021,46:0.00115314,47:0.00126615,48:0.00139024,49:0.00152647,50:0.00167605,51:0.00184026,52:0.00202055,53:0.00221848,54:0.00243578,55:0.00267434,56:0.00293622,57:0.00322371,58:0.00353929,59:0.00388571,60:0.00426596,61:0.00468334,62:0.00514145,63:0.00564423,64:0.00619604,65:0.00680160,66:0.00746613,67:0.00819532,68:0.00899540,69:0.00987319,70:0.01083618,71:0.01189253,72:0.01305117,73:0.01432187,74:0.01571531,75:0.01724312,76:0.01891804,77:0.02075393,78:0.02276590,79:0.02497042,80:0.02738210,81:0.03002636,82:0.03292159,83:0.03609071,84:0.03955854,85:0.04335197,86:0.04750000,87:0.05203393,88:0.05698741,89:0.06239659,90:0.06830019,91:0.07473955,92:0.08175869,93:0.09042079,94:0.10110721,95:0.11431587,96:0.13069990,97:0.15112112,98:0.17473764,99:0.20205015,100:0.23363790,101:0.27016395,102:0.31241675,103:0.36128724,104:0.41781337,105:0.48319612,106:0.55882516,107:0.64631980,108:0.74751993,109:0.85071915,110:1.0};
+var QX_G3_MALE={45:0.01443579,46:0.01552347,47:0.0166931,48:0.01833085,49:0.02012926,50:0.02210412,51:0.02427273,52:0.0266541,53:0.02879133,54:0.03109993,55:0.03359365,56:0.03628732,57:0.03919697,58:0.04138025,59:0.04368513,60:0.0461184,61:0.0486872,62:0.05139908,63:0.05381452,64:0.05634346,65:0.05899125,66:0.06176346,67:0.06466595,68:0.06837958,69:0.07230648,70:0.07645888,71:0.08084976,72:0.08549279,73:0.08965247,74:0.09489967,75:0.09953972,76:0.10510103,77:0.111026,78:0.1176045,79:0.12511164,80:0.13222667,81:0.13964632,82:0.15050754,83:0.16404189,84:0.17082488,85:0.18347276,86:0.1926464,87:0.20227856,88:0.21239244,89:0.22301227,90:0.2341623,91:0.2581647,92:0.28462627,93:0.31380103,94:0.34596516,95:0.38142644,96:0.42052324,97:0.46362658,98:0.51114756,99:0.56354049,100:0.62130395};
+var QX_G3_FEMALE={45:0.01108728,46:0.01192267,47:0.01282099,48:0.01407885,49:0.01546011,50:0.01697688,51:0.01864246,52:0.02047145,53:0.02211293,54:0.02388603,55:0.02580131,56:0.02787016,57:0.03010489,58:0.03178174,59:0.03355199,60:0.03542083,61:0.03739378,62:0.03947662,63:0.04133177,64:0.0432741,65:0.04530771,66:0.04743689,67:0.04966612,68:0.05251834,69:0.05553436,70:0.05872358,71:0.06209595,72:0.06566199,73:0.06885679,74:0.07288686,75:0.07645061,76:0.08072193,77:0.08527255,78:0.09032511,79:0.0960909,80:0.10155553,81:0.10725413,82:0.11559599,83:0.12599094,84:0.13120055,85:0.14091465,86:0.14796038,87:0.15535828,88:0.16312615,89:0.17128262,90:0.1798463,91:0.19828114,92:0.21860471,93:0.24101213,94:0.26571551,95:0.29295123,96:0.32297919,97:0.35608433,98:0.39258241,99:0.43282234,100:0.47718706};
+var QX_G2_MALE={45:0.03003845,46:0.03179728,47:0.03365909,48:0.03629079,49:0.03912825,50:0.04218757,51:0.04548609,52:0.0490425,53:0.05200546,54:0.05514743,55:0.05847922,56:0.06201231,57:0.06575885,58:0.06830443,59:0.07094854,60:0.07369502,61:0.07654781,62:0.07951104,63:0.08228989,64:0.08516586,65:0.08814235,66:0.09122286,67:0.09441103,68:0.09938364,69:0.10461816,70:0.11012838,71:0.11592882,72:0.12203477,73:0.12797241,74:0.13546241,75:0.14208575,76:0.15002412,77:0.15848159,78:0.16787192,79:0.17858782,80:0.188744,81:0.19933502,82:0.21483862,83:0.23415794,84:0.24384016,85:0.2618941,86:0.2749888,87:0.28873802,88:0.30317484,89:0.31833388,90:0.33424975,91:0.36851144,92:0.40628342,93:0.44792828,94:0.49384024,95:0.54445866,96:0.6002665,97:0.66179341,98:0.72962618,99:0.8044133,100:0.88686645};
+var QX_G2_FEMALE={45:0.02477474,46:0.02622536,47:0.02776092,48:0.02993146,49:0.03227171,50:0.03479494,51:0.03751545,52:0.04044866,53:0.04289241,54:0.04548381,55:0.04823176,56:0.05114574,57:0.05423576,58:0.05633527,59:0.05851605,60:0.06078126,61:0.06313415,62:0.06557812,63:0.06787003,64:0.07024204,65:0.07269694,66:0.07523765,67:0.07786715,68:0.0819684,69:0.08628566,70:0.09083031,71:0.09561432,72:0.10065031,73:0.10554749,74:0.11172499,75:0.11718771,76:0.12373502,77:0.13071046,78:0.1384553,79:0.14729343,80:0.15566992,81:0.16440505,82:0.17719191,83:0.19312586,84:0.20111144,85:0.21600174,86:0.22680183,87:0.23814173,88:0.25004876,89:0.26255144,90:0.27567833,91:0.30393626,92:0.33508936,93:0.36943669,94:0.40730338,95:0.4490518,96:0.4950803,97:0.5458257,98:0.60177196,99:0.66345394,100:0.73145863};
+var QX_G1_MALE={45:0.05040257,46:0.05335377,47:0.05647777,48:0.06089359,49:0.06565467,50:0.070788,51:0.0763227,52:0.08229013,53:0.08726178,54:0.0925338,55:0.09812433,56:0.10405262,57:0.11033908,58:0.11461039,59:0.11904705,60:0.12365545,61:0.12844225,62:0.13341435,63:0.13807709,64:0.14290278,65:0.14789713,66:0.15306603,67:0.15841558,68:0.16251476,69:0.16672001,70:0.17103408,71:0.17545978,72:0.18,73:0.18875796,74:0.19980563,75:0.20957498,76:0.221284,77:0.23375867,78:0.24760931,79:0.26341515,80:0.27839542,81:0.29401706,82:0.3168847,83:0.34538049,84:0.35966167,85:0.38629103,86:0.40560558,87:0.42588553,88:0.4471797,89:0.46953913,90:0.49301486,91:0.5435505,92:0.59926376,93:0.66068949,94:0.72840916,95:0.80307078,96:0.88538677,97:0.97613831};
+var QX_G1_FEMALE={45:0.07560385,46:0.08003065,47:0.08471665,48:0.09134038,49:0.098482,50:0.106182,51:0.11448405,52:0.1234352,53:0.13089267,54:0.1388007,55:0.1471865,56:0.15607893,57:0.16550861,58:0.17191558,59:0.17857057,60:0.18548318,61:0.19266338,62:0.20012153,63:0.20711563,64:0.21435417,65:0.2218457,66:0.22959904,67:0.23762337,68:0.24377214,69:0.25008002,70:0.25655112,71:0.26318967,72:0.27,73:0.28313695,74:0.29970845,75:0.31436247,76:0.331926,77:0.35063801,78:0.37141397,79:0.39512273,80:0.41759312,81:0.44102558,82:0.47532705,83:0.51807074,84:0.53949251,85:0.57943655,86:0.60840838,87:0.6388283,88:0.67076954,89:0.70430869,90:0.73952229,91:0.81532575,92:0.89889564,93:0.99103424};
+var QX_OPPV_MALE={45:0.01003465,46:0.01063079,47:0.01126233,48:0.01215709,49:0.01312293,50:0.01416551,51:0.01529092,52:0.01650573,53:0.01762208,54:0.01881394,55:0.02008641,56:0.02144494,57:0.02289535,58:0.02420524,59:0.02559008,60:0.02705414,61:0.02860196,62:0.03023834,63:0.03237041,64:0.03465281,65:0.03709614,66:0.03971174,67:0.04251177,68:0.04728883,69:0.05260268,70:0.05851365,71:0.06508885,72:0.07240289,73:0.07592568,74:0.08036948,75:0.08429908,76:0.0890089,77:0.09402669,78:0.09959795,79:0.10595566,80:0.1119813,81:0.11826492,82:0.12746316,83:0.13892526,84:0.1446697,85:0.15538105,86:0.1631501,87:0.17130747,88:0.1798728,89:0.18886662,90:0.19830946,91:0.21863682,92:0.24104683,93:0.26575461,94:0.29299406,95:0.32302582,96:0.35613646,97:0.39264021,98:0.4328852,99:0.47725619,100:0.52617542};
+var QX_OPPV_FEMALE={45:0.00501733,46:0.00531539,47:0.00563117,48:0.00607855,49:0.00656147,50:0.00708275,51:0.00764546,52:0.00825287,53:0.00881104,54:0.00940697,55:0.0100432,56:0.01072247,57:0.01144767,58:0.01210262,59:0.01279504,60:0.01352707,61:0.01430098,62:0.01511917,63:0.01618521,64:0.01732641,65:0.01854807,66:0.01985587,67:0.02125588,68:0.02364441,69:0.02630134,70:0.02925683,71:0.03254442,72:0.03620145,73:0.03796284,74:0.04018474,75:0.04214954,76:0.04450445,77:0.04701334,78:0.04979897,79:0.05297783,80:0.05599065,81:0.05913246,82:0.06373158,83:0.06946263,84:0.07233485,85:0.07769052,86:0.08157505,87:0.08565373,88:0.0899364,89:0.09443331,90:0.09915473,91:0.10931841,92:0.12052342,93:0.13287731,94:0.14649703,95:0.16151291,96:0.17806823,97:0.1963201,98:0.2164426,99:0.2386281,100:0.26308771};
+var OMEGA = 111;
+
+function checkOPPV() {
+  var fromOther = document.getElementById('fromOtherOPPV').value;
+  var months = parseInt(document.getElementById('oppvMonths').value) || 0;
+  var surrenderAmt = getMoneyVal('surrenderFromOther');
+  var profContrib = getMoneyVal('professionalContrib');
+  if (fromOther === 'yes' && months > 59 && surrenderAmt > 0) return true;
+  if (profContrib > 0 && months >= 60) return true;
+  return false;
+}
+
+function getMortTable(gender, condition, oppv) {
+  if (condition === 'group3') return gender === 'male' ? QX_G3_MALE : QX_G3_FEMALE;
+  if (condition === 'group2') return gender === 'male' ? QX_G2_MALE : QX_G2_FEMALE;
+  if (condition === 'group1') return gender === 'male' ? QX_G1_MALE : QX_G1_FEMALE;
+  if (oppv) return gender === 'male' ? QX_OPPV_MALE : QX_OPPV_FEMALE;
+  return gender === 'male' ? QX_MALE : QX_FEMALE;
+}
+function getQx(age, gender, condition, oppv) {
+  if (age < 45) return 0;
+  if (age >= 110) return 1.0;
+  var table = getMortTable(gender, condition, oppv);
+  var val = table[age];
+  return val !== undefined ? val : 1.0;
+}
+function getMinAnnuityAge(gender, calcYear, oppv) {
+  if (oppv) return 50;
+  if (gender === 'male') return 55;
+  if (calcYear >= 2027) return 55;
+  if (calcYear < 2018) return 50;
+  var ages = {2018:50.5,2019:51,2020:51.5,2021:52,2022:52.5,2023:53,2024:53,2025:53,2026:53};
+  return ages[calcYear] || 53;
+}
+function computeAnnualFactor(startAge, gender, guaranteedYears, discountRate, indexationRate, condition, oppv) {
+  var factor = 0, tpx = 1.0, maxT = OMEGA - startAge;
+  for (var t = 0; t < maxT; t++) {
+    var age = startAge + t;
+    var G = (t < guaranteedYears) ? 1.0 : tpx;
+    var H = Math.pow(1 + discountRate, -t);
+    var I = (t === 0) ? 1.0 : Math.pow(1 + indexationRate, t);
+    factor += I * H * G;
+    var qx = getQx(age, gender, condition, oppv);
+    tpx *= (1 - qx);
+    if (tpx <= 1e-15) break;
+  }
+  return factor;
+}
+
+function parseDateInput(str) {
+  if (!str) return null;
+  var m = str.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!m) return null;
+  var d = new Date(+m[3], +m[2] - 1, +m[1]);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+function parseDate(str) {
+  if (str.indexOf('.') !== -1) return parseDateInput(str);
+  var parts = str.split('-');
+  return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+}
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function formatDate(d) {
+  return pad2(d.getDate()) + '.' + pad2(d.getMonth() + 1) + '.' + d.getFullYear();
+}
+function calcAge(birth, ref) {
+  var age = ref.getFullYear() - birth.getFullYear();
+  var m = ref.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
+  return age;
+}
+function formatNum(n) {
+  if (n === null || n === undefined || isNaN(n)) return '\u2014';
+  return n.toLocaleString('ru-RU', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function formatInt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '\u2014';
+  return Math.round(n).toLocaleString('ru-RU');
+}
+function parseMoney(str) {
+  return parseInt(String(str).replace(/\s/g, '').replace(/,/g, ''), 10) || 0;
+}
+function formatMoney(n) {
+  return Math.abs(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+function selectAllOnFocus(el) {
+  el.addEventListener('focus', function() {
+    var inp = this;
+    try { setTimeout(function() { inp.select(); }, 50); } catch(e) {}
+  });
+}
+
+function initMoneyInput(el) {
+  function calc() {
+    // iOS Safari иногда «теряет» отложенный пересчёт; сумму обновляем сразу
+    updateTotalPremium();
+    scheduleCalc();
+  }
+  el.addEventListener('input', calc);
+  el.addEventListener('keyup', calc);
+  el.addEventListener('change', calc);
+  el.addEventListener('blur', function() {
+    var raw = parseMoney(el.value);
+    el.value = formatMoney(raw);
+    calc();
+  });
+  selectAllOnFocus(el);
+}
+function initDateInput(el) {
+  el.addEventListener('input', function() {
+    var v = this.value.replace(/[^\d.]/g, '');
+    var digits = v.replace(/\./g, '');
+    if (digits.length > 8) digits = digits.substring(0, 8);
+    var out = '';
+    for (var i = 0; i < digits.length; i++) {
+      if (i === 2 || i === 4) out += '.';
+      out += digits[i];
+    }
+    if (out !== this.value) this.value = out;
+    scheduleCalc();
+  });
+  el.addEventListener('keyup', scheduleCalc);
+  el.addEventListener('change', scheduleCalc);
+  selectAllOnFocus(el);
+}
+function getMoneyVal(id) {
+  var el = document.getElementById(id);
+  return el ? parseMoney(el.value) : 0;
+}
+function updateTotalPremium() {
+  var total = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
+    + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
+    + getMoneyVal('surrenderFromOther');
+  var el = document.getElementById('totalPremiumDisplay');
+  if (el) el.textContent = formatMoney(total);
+}
+
+function calculate() {
+  try { _calculate(); } catch(e) {
+    var d = document.getElementById('annuityPayment');
+    if (d) d.textContent = 'Ошибка: ' + e.message;
+  }
+}
+function _calculate() {
+  var calcDateStr = document.getElementById('calcDate').value.trim();
+  var birthDateStr = document.getElementById('birthDate').value.trim();
+  if (!parseDateInput(calcDateStr) || !parseDateInput(birthDateStr)) return;
+  var gender = document.getElementById('gender').value;
+  var guaranteedYears = parseInt(document.getElementById('guaranteedPeriod').value) || 0;
+  var discountRate = parseFloat(document.getElementById('discountRate').value) / 100;
+  var indexationRate = parseFloat(document.getElementById('indexationRate').value) / 100;
+  var dividendRate = parseFloat(document.getElementById('dividendRate').value) / 100;
+  var cRate = parseFloat(document.getElementById('expenseC').value) / 100;
+  var dRate = parseFloat(document.getElementById('expenseD').value) / 100;
+  var livingWage = parseFloat(document.getElementById('livingWage').value) || 50851;
+  var condition = document.getElementById('physicalCondition').value;
+  var oppv = checkOPPV();
+
+  var totalPremium = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
+    + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
+    + getMoneyVal('surrenderFromOther');
+
+  var calcDate = parseDate(calcDateStr);
+  var birthDate = parseDate(birthDateStr);
+  var currentAge = calcAge(birthDate, calcDate);
+  var calcYear = calcDate.getFullYear();
+  if (currentAge >= OMEGA || currentAge < 0) return;
+
+  var minAge = getMinAnnuityAge(gender, calcYear, oppv);
+  var minAgeInt = Math.ceil(minAge);
+  var deferralYears = 0, startAge = currentAge;
+  var startPayDate = new Date(calcDate);
+
+  if (currentAge < minAgeInt) {
+    deferralYears = minAgeInt - currentAge;
+    startAge = minAgeInt;
+    startPayDate = new Date(birthDate.getFullYear() + minAgeInt, birthDate.getMonth(), birthDate.getDate());
+    if (startPayDate <= calcDate) {
+      startPayDate = new Date(calcDate);
+      deferralYears = 0;
+      startAge = currentAge;
+    }
+  }
+
+  var annualFactor = computeAnnualFactor(startAge, gender, guaranteedYears, discountRate, indexationRate, condition, oppv);
+  var periodicFactor = annualFactor - 11 / 24;
+  var deferralDiscount = (deferralYears > 0) ? Math.pow((1 + indexationRate) / (1 + discountRate), deferralYears) : 1.0;
+  var netFactorDeferred = periodicFactor * deferralDiscount;
+  var grossFactor = netFactorDeferred * (1 + dRate) / (1 - cRate);
+  var annualPayment = totalPremium / grossFactor;
+  var indexFirst = Math.pow(1 + indexationRate, Math.max(deferralYears, 0));
+  var periodicPayment = Math.round(annualPayment / 12 * indexFirst);
+  var minPen = Math.ceil(0.70 * livingWage);
+  var minRequiredPremium = Math.ceil(grossFactor * minPen * 12);
+  var shortfall = Math.max(0, minRequiredPremium - totalPremium);
+  var annualDividend = (totalPremium > 0) ? Math.round(totalPremium * dividendRate) : 0;
+
+  var surrender2ySufficient = '\u041d\u0435\u0442';
+  if (totalPremium > 0 && startAge + 2 < OMEGA) {
+    var af2y = computeAnnualFactor(startAge + 2, gender, Math.max(0, guaranteedYears - 2), discountRate, indexationRate, condition, oppv);
+    var pf2y = af2y - 11 / 24;
+    var gf2y = pf2y * (1 + dRate) / (1 - cRate);
+    var minPen2y = Math.round(minPen * Math.pow(1.07, 2));
+    var minRequired2y = Math.ceil(gf2y * minPen2y * 12);
+    var annPayY1 = annualPayment;
+    var annPayY2 = annualPayment * (1 + indexationRate);
+    var remaining = Math.round(totalPremium - (annPayY1 + annPayY2) - totalPremium * cRate - (annPayY1 + annPayY2) * dRate);
+    if (remaining >= minRequired2y) surrender2ySufficient = '\u0414\u0430';
+  }
+
+  document.getElementById('totalPremiumDisplay').textContent = formatMoney(totalPremium);
+  document.getElementById('startDate').textContent = formatDate(startPayDate);
+  document.getElementById('currentAge').textContent = currentAge;
+  document.getElementById('retirementAgeDisplay').textContent = minAgeInt;
+  document.getElementById('ageAtStart').textContent = startAge;
+
+  var deferralRow = document.getElementById('deferralRow');
+  if (deferralYears > 0) {
+    deferralRow.style.display = '';
+    document.getElementById('deferralDisplay').textContent = deferralYears + ' \u043b\u0435\u0442';
+  } else {
+    deferralRow.style.display = 'none';
+  }
+
+  document.getElementById('endDate').textContent = '\u043f\u043e\u0436\u0438\u0437\u043d\u0435\u043d\u043d\u043e';
+  document.getElementById('shortfall').textContent = shortfall > 0 ? formatInt(shortfall) : '0';
+  document.getElementById('shortfall').className = 'val ' + (shortfall > 0 ? 'red' : 'highlight');
+  document.getElementById('indexDisplay').textContent = (indexationRate * 100).toFixed(1) + '%';
+  document.getElementById('divDisplay').textContent = (dividendRate * 100).toFixed(1) + '%';
+  document.getElementById('surrender2y').textContent = surrender2ySufficient;
+  document.getElementById('minPaymentDisplay').textContent = formatNum(minPen) + ' \u0442\u0433';
+  document.getElementById('annuityFactorDisplay').textContent = grossFactor.toFixed(4);
+
+  var payEl = document.getElementById('annuityPayment');
+  var divEl = document.getElementById('dividendPayment');
+  if (shortfall > 0) {
+    payEl.textContent = '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u0441\u0440\u0435\u0434\u0441\u0442\u0432';
+    payEl.className = 'r-val insufficient';
+    divEl.textContent = '\u2014';
+  } else {
+    payEl.textContent = formatInt(periodicPayment) + ' \u0442\u0433/\u043c\u0435\u0441';
+    payEl.className = 'r-val';
+    divEl.textContent = formatInt(annualDividend) + ' \u0442\u0433';
+  }
+  updateResultText();
+}
+
+function exportData() {
+  var rows = [
+    ['Параметр','Значение'],
+    ['Дата расчета', document.getElementById('calcDate').value],
+    ['Дата рождения', document.getElementById('birthDate').value],
+    ['Пол', document.getElementById('gender').value === 'male' ? 'Мужчина' : 'Женщина'],
+    ['Гарант. период', document.getElementById('guaranteedPeriod').value],
+    ['Премия', document.getElementById('totalPremiumDisplay').textContent],
+    ['Возраст', document.getElementById('currentAge').textContent],
+    ['Начало выплат', document.getElementById('startDate').textContent],
+    ['Выплата', document.getElementById('annuityPayment').textContent],
+    ['Дивиденд', document.getElementById('dividendPayment').textContent],
+    ['ФИО', document.getElementById('insuredName').value]
+  ];
+  var csv = '\uFEFF';
+  for (var i = 0; i < rows.length; i++) {
+    csv += '"' + rows[i][0] + '";"' + rows[i][1] + '"\n';
+  }
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'annuity_' + document.getElementById('calcDate').value.replace(/\./g,'-') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* Button handler (called from onclick in HTML) */
+function doCalcNow() {
+  updateTotalPremium();
+  calculate();
+  saveState();
+}
+
+var SAVE_KEY = 'annuityCalcState';
+var SAVE_FIELDS = [
+  'calcDate','birthDate','gender','annuityType','guaranteedPeriod',
+  'physicalCondition','mandatoryContrib','voluntaryContrib',
+  'professionalContrib','ownFunds','surrenderFromOther',
+  'fromOtherOPPV','oppvMonths','discountRate','indexationRate',
+  'dividendRate','expenseC','expenseD','livingWage','insuredName'
+];
+
+function saveState() {
+  try {
+    var data = {};
+    for (var i = 0; i < SAVE_FIELDS.length; i++) {
+      var el = document.getElementById(SAVE_FIELDS[i]);
+      if (el) data[SAVE_FIELDS[i]] = el.value;
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    var data = JSON.parse(raw);
+    for (var i = 0; i < SAVE_FIELDS.length; i++) {
+      var id = SAVE_FIELDS[i];
+      if (data[id] === undefined) continue;
+      var el = document.getElementById(id);
+      if (!el) continue;
+      el.value = data[id];
+    }
+  } catch(e) {}
+}
+
+var calcTimer = null;
+function scheduleCalc() {
+  clearTimeout(calcTimer);
+  calcTimer = setTimeout(doCalcNow, 120);
+}
+
+function initApp() {
+  loadState();
+  try {
+    var verEl = document.getElementById('buildVer');
+    if (verEl) verEl.textContent = 'v1.2 (2026-04-15)';
+    var toggle = document.getElementById('settingsToggle');
+    if (toggle) toggle.addEventListener('click', function() {
+      document.getElementById('settingsPanel').classList.toggle('open');
+    });
+
+    var moneyInputs = document.querySelectorAll('.money-input');
+    for (var i = 0; i < moneyInputs.length; i++) initMoneyInput(moneyInputs[i]);
+
+    var dateInputs = document.querySelectorAll('.date-input');
+    for (var j = 0; j < dateInputs.length; j++) initDateInput(dateInputs[j]);
+
+    var allInputs = document.querySelectorAll('input');
+    for (var k = 0; k < allInputs.length; k++) {
+      var el = allInputs[k];
+      if (!el.classList.contains('money-input') && !el.classList.contains('date-input')) {
+        el.addEventListener('input', scheduleCalc);
+        el.addEventListener('change', scheduleCalc);
+        selectAllOnFocus(el);
+      }
+    }
+    var allSelects = document.querySelectorAll('select');
+    for (var s = 0; s < allSelects.length; s++) {
+      allSelects[s].addEventListener('change', scheduleCalc);
+    }
+  } catch(e) {}
+
+  updateTotalPremium();
+  calculate();
+  updateResultText();
+}
+
+/* ═══════════ Telegram Web App ═══════════ */
+var tg = window.Telegram && window.Telegram.WebApp;
+var isTgWebApp = !!(tg && tg.initData);
+
+function initTelegram() {
+  if (!isTgWebApp) return;
+  tg.ready();
+  tg.expand();
+  document.body.classList.add('tg-webapp');
+
+  var theme = tg.themeParams || {};
+  if (theme.bg_color) {
+    document.documentElement.style.setProperty('--bg', theme.bg_color);
+  }
+  if (theme.secondary_bg_color) {
+    document.documentElement.style.setProperty('--card', theme.secondary_bg_color);
+  }
+  if (theme.text_color) {
+    document.body.style.color = theme.text_color;
+    document.documentElement.style.setProperty('--label', theme.text_color);
+  }
+  if (theme.hint_color) {
+    document.documentElement.style.setProperty('--label2', theme.hint_color);
+  }
+  if (theme.button_color) {
+    document.documentElement.style.setProperty('--accent', theme.button_color);
+  }
+
+  var sendBtn = document.getElementById('tgSendBtn');
+  if (sendBtn) sendBtn.style.display = '';
+
+  tg.MainButton.setText('Отправить результат');
+  tg.MainButton.show();
+  tg.MainButton.onClick(sendToTelegram);
+}
+
+function buildResultText() {
+  var name = document.getElementById('insuredName').value || '';
+  var pay = document.getElementById('annuityPayment').textContent || '';
+  var div = document.getElementById('dividendPayment').textContent || '';
+  var premium = document.getElementById('totalPremiumDisplay').textContent || '';
+  var birth = document.getElementById('birthDate').value || '';
+  var calcD = document.getElementById('calcDate').value || '';
+  var gender = document.getElementById('gender').value === 'male' ? 'Мужчина' : 'Женщина';
+  var startD = document.getElementById('startDate').textContent || '';
+  var age = document.getElementById('currentAge').textContent || '';
+  var ageStart = document.getElementById('ageAtStart').textContent || '';
+  var condition = document.getElementById('physicalCondition');
+  var condText = condition.options[condition.selectedIndex].text;
+  var insufficient = (pay.indexOf('Недостаточно') !== -1);
+
+  function addYearSuffix(s) {
+    s = (s || '').trim();
+    if (!s) return s;
+    // если уже есть "г" / "г." в конце — не дублируем
+    var low = s.toLowerCase();
+    if (low.length >= 1 && low[low.length - 1] === 'г') return s + '.';
+    if (low.length >= 2 && low.substring(low.length - 2) === 'г.') return s;
+    return s + ' г.';
+  }
+
+  var lines = [];
+  lines.push('📊 Пенсионный аннуитет');
+  lines.push('');
+  if (name) lines.push('ФИО: ' + name);
+  if (calcD) lines.push('📅 Дата расчёта: ' + addYearSuffix(calcD));
+  lines.push('👤 ' + gender + ', ' + addYearSuffix(birth));
+  lines.push('🎂 Возраст: ' + age);
+  if (condText !== 'Без инвалидности') lines.push('♿ Инвалидность: ' + condText);
+  lines.push('');
+  lines.push('💰 Премия: ' + premium + ' тг');
+  lines.push('📆 Начало выплат: ' + startD + ' (' + ageStart + ' лет)');
+  lines.push('');
+  if (insufficient) {
+    lines.push('❌ Недостаточно средств');
+  } else {
+    lines.push('✅ Ежемесячная выплата: ' + pay);
+    lines.push('🎁 Дивиденд: ' + div + ' (единовременно)');
+  }
+  return lines.join('\n');
+}
+
+function updateResultText() {
+  var el = document.getElementById('resultText');
+  if (!el) return;
+  el.textContent = buildResultText();
+}
+
+function sendToTelegram() {
+  if (!isTgWebApp) return;
+  var text = buildResultText();
+  try {
+    tg.sendData(text);
+  } catch(e) {}
+}
+
+function copyResult() {
+  var text = buildResultText();
+  if (navigator.share) {
+    try {
+      navigator.share({ text: text });
+      return;
+    } catch(e) {}
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      alert('Итог скопирован');
+    }, function() {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Итог скопирован');
+  } catch(e) {
+    alert('Не удалось скопировать. Можно использовать Экспорт (📋).');
+  }
+}
+
+/* Multiple init fallbacks for iOS */
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(function() { initApp(); initTelegram(); }, 1);
+} else {
+  document.addEventListener('DOMContentLoaded', function() { initApp(); initTelegram(); });
+}
+window.addEventListener('load', function() { initApp(); initTelegram(); });
+window.addEventListener('pageshow', function() { updateTotalPremium(); calculate(); });
+</script>
+</body>
+</html>
