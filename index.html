@@ -282,6 +282,23 @@ body {
 }
 .btn-icon:active { opacity: 0.6; }
 
+.btn-copy-text {
+  border: 0.5px solid var(--separator);
+  background: rgba(255,255,255,0.85);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: none;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-copy-text:active { opacity: 0.7; }
+
 /* ─── FIO row in result ─── */
 .fio-row {
   display: flex;
@@ -336,7 +353,9 @@ body.tg-webapp .result-text { color: var(--label); }
 
 /* ─── Desktop (>700px): 2-column ─── */
 @media (min-width: 701px) {
-  .calc-btn-wrap { display: none; }
+  /* На больших экранах делаем кнопку по ширине одной колонки */
+  .calc-btn-wrap { display: block; max-width: 520px; margin: 0 auto; }
+  .btn-copy-text { display: none; }
   .app { max-width: 1100px; }
   .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
   .columns .col { min-width: 0; }
@@ -571,11 +590,11 @@ body.tg-webapp .result-bar {
           <div class="result-text" id="resultText">—</div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="calc-btn-wrap">
-    <button class="calc-btn" id="calcBtn" type="button" onclick="copyResult()">Скопировать</button>
+      <div class="calc-btn-wrap">
+        <button class="calc-btn" id="calcBtn" type="button" onclick="copyResult()">Скопировать</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1124,19 +1143,18 @@ function buildResultText() {
   var gYears = 0;
   try { gYears = gEl ? (parseInt(gEl.value, 10) || 0) : 0; } catch(e) { gYears = 0; }
   lines.push('🛡️ Гарантированный период: ' + (gYears > 0 ? (gYears + ' лет') : 'нет'));
+  // Сумма выплат за гарантированный период, с годовой индексацией
+  var mG0 = parseMoney(pay);
+  if (!insufficient && gYears > 0 && mG0 > 0) {
+    var totalG0 = sumMonthlyIndexed(mG0, gYears * 12, indexRate);
+    lines.push('🧾 За гарантированный период компания выплатит: ' + formatInt(totalG0) + ' тг');
+  }
   lines.push('');
   if (insufficient) {
     lines.push('❌ Недостаточно ' + (shortfall || '0') + ' тенге');
   } else {
     var payLine = '✅ Ежемесячная выплата: ' + pay + ' (пожизненно, индексация ' + (indexDisp || '8.0%') + ')';
     lines.push(payLine);
-
-    // Сумма выплат за гарантированный период, с годовой индексацией
-    var mG = parseMoney(pay);
-    if (gYears > 0 && mG > 0) {
-      var totalG = sumMonthlyIndexed(mG, gYears * 12, indexRate);
-      lines.push('🧾 За гарантированный период компания выплатит: ' + formatInt(totalG) + ' тг');
-    }
 
     // Сумма выплат до 63 лет (по дате начала выплат), с годовой индексацией
     var bD = parseDateInput((birth || '').trim());
