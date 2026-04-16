@@ -763,6 +763,12 @@ function calculate() {
     if (d) d.textContent = 'Ошибка: ' + e.message;
   }
 }
+function autoSetAnnuityType(currentAge, minAgeInt) {
+  var el = document.getElementById('annuityType');
+  if (!el) return;
+  var should = (currentAge >= minAgeInt) ? 'immediate_lifetime' : 'deferred_lifetime';
+  if (el.value !== should) el.value = should;
+}
 function _calculate() {
   var calcDateStr = document.getElementById('calcDate').value.trim();
   var birthDateStr = document.getElementById('birthDate').value.trim();
@@ -788,8 +794,35 @@ function _calculate() {
   var calcYear = calcDate.getFullYear();
   if (currentAge >= OMEGA || currentAge < 0) return;
 
+  var hasProfessional = getMoneyVal('professionalContrib') > 0;
+  var minCalcAge = hasProfessional ? 40 : 45;
+  if (currentAge < minCalcAge) {
+    var payEl0 = document.getElementById('annuityPayment');
+    var divEl0 = document.getElementById('dividendPayment');
+    if (payEl0) {
+      payEl0.textContent = 'Расчёт доступен с ' + minCalcAge + ' лет';
+      payEl0.className = 'r-val insufficient';
+    }
+    if (divEl0) divEl0.textContent = '—';
+
+    var d0 = document.getElementById('deferralRow');
+    if (d0) d0.style.display = 'none';
+    var start0 = document.getElementById('startDate');
+    if (start0) start0.textContent = '—';
+    var age0 = document.getElementById('currentAge');
+    if (age0) age0.textContent = currentAge;
+    var ra0 = document.getElementById('retirementAgeDisplay');
+    if (ra0) ra0.textContent = '—';
+    var as0 = document.getElementById('ageAtStart');
+    if (as0) as0.textContent = '—';
+
+    updateResultText();
+    return;
+  }
+
   var minAge = getMinAnnuityAge(gender, calcYear, oppv, birthDate.getFullYear());
   var minAgeInt = Math.ceil(minAge);
+  autoSetAnnuityType(currentAge, minAgeInt);
   var deferralYears = 0, startAge = currentAge;
   var startPayDate = new Date(calcDate);
 
@@ -915,6 +948,17 @@ function scheduleCalc() {
   calcTimer = setTimeout(doCalcNow, 180);
 }
 
+function _fmt2(n) { return (n < 10 ? '0' : '') + n; }
+function formatDateDDMMYYYY(d) {
+  return _fmt2(d.getDate()) + '.' + _fmt2(d.getMonth() + 1) + '.' + d.getFullYear();
+}
+function autoSetCalcDateToday() {
+  var el = document.getElementById('calcDate');
+  if (!el) return;
+  // Всегда ставим сегодняшнюю дату при открытии страницы.
+  el.value = formatDateDDMMYYYY(new Date());
+}
+
 var appInitialized = false;
 function initApp() {
   if (appInitialized) return;
@@ -931,6 +975,7 @@ function initApp() {
     var moneyInputs = document.querySelectorAll('.money-input');
     for (var i = 0; i < moneyInputs.length; i++) initMoneyInput(moneyInputs[i]);
 
+    autoSetCalcDateToday();
     var dateInputs = document.querySelectorAll('.date-input');
     for (var j = 0; j < dateInputs.length; j++) initDateInput(dateInputs[j]);
 
