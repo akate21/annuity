@@ -383,7 +383,7 @@ body.tg-webapp .result-bar {
       <span class="header-brand">Aslan</span>
       <span class="header-sub">Пенсионный аннуитет - калькулятор</span>
     </h1>
-    <span class="ver" id="buildVer">v1.2 (2026-04-15)</span>
+    <span class="ver" id="buildVer">v2.1</span>
   </div>
 
   <div class="columns">
@@ -404,13 +404,6 @@ body.tg-webapp .result-bar {
           <select id="gender">
             <option value="female">Женщина</option>
             <option value="male">Мужчина</option>
-          </select>
-        </div>
-        <div class="row">
-          <label>Вид выплат</label>
-          <select id="annuityType">
-            <option value="immediate_lifetime">Немедленный пожизн.</option>
-            <option value="deferred_lifetime">Отсроченный пожизн.</option>
           </select>
         </div>
         <div class="row">
@@ -460,10 +453,6 @@ body.tg-webapp .result-bar {
             <option value="no">Нет</option>
             <option value="yes">Да</option>
           </select>
-        </div>
-        <div class="row">
-          <label class="small">Мес. уплаченных ОППВ</label>
-          <input type="number" id="oppvMonths" value="0" min="0" step="1" inputmode="numeric">
         </div>
       </div>
 
@@ -548,6 +537,17 @@ body.tg-webapp .result-bar {
           <span class="val" id="divDisplay" style="font-size:14px">11,0%</span>
         </div>
         <div class="row">
+          <label class="small">вид выплат</label>
+          <select id="annuityType" disabled>
+            <option value="immediate_lifetime">Немедленный пожизн.</option>
+            <option value="deferred_lifetime">Отсроченный пожизн.</option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="small">мес. уплаченных ОППВ</label>
+          <input type="number" id="oppvMonths" value="0" min="0" step="1" inputmode="numeric" disabled>
+        </div>
+        <div class="row">
           <label>Выкупная ч/з 2 года достаточна</label>
           <span class="val" id="surrender2y">—</span>
         </div>
@@ -611,9 +611,15 @@ var OMEGA = 111;
 
 function checkOPPV() {
   var fromOther = document.getElementById('fromOtherOPPV').value;
-  var months = parseInt(document.getElementById('oppvMonths').value) || 0;
+  var monthsEl = document.getElementById('oppvMonths');
+  var months = parseInt(monthsEl.value) || 0;
   var surrenderAmt = getMoneyVal('surrenderFromOther');
   var profContrib = getMoneyVal('professionalContrib');
+  // По требованию: при наличии проф. взносов стаж ОППВ считаем 60 мес. автоматически
+  if (profContrib > 0) {
+    months = 60;
+    if (monthsEl) monthsEl.value = '60';
+  }
   if (fromOther === 'yes' && months > 59 && surrenderAmt > 0) return true;
   if (profContrib > 0 && months >= 60) return true;
   return false;
@@ -716,6 +722,17 @@ function initMoneyInput(el) {
   function calc() {
     // iOS Safari иногда «теряет» отложенный пересчёт; сумму обновляем сразу
     updateTotalPremium();
+    // Авто-стаж ОППВ = 60 при проф. взносах
+    if (el && el.id === 'professionalContrib') {
+      try {
+        var v = parseMoney(el.value);
+        var mEl = document.getElementById('oppvMonths');
+        if (mEl) {
+          if (v > 0) mEl.value = '60';
+          else if ((mEl.value || '') === '60') mEl.value = '0';
+        }
+      } catch(e) {}
+    }
     scheduleCalc();
   }
   el.addEventListener('input', calc);
@@ -889,7 +906,7 @@ function _calculate() {
   var payEl = document.getElementById('annuityPayment');
   var divEl = document.getElementById('dividendPayment');
   if (shortfall > 0) {
-    payEl.textContent = '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e \u0441\u0440\u0435\u0434\u0441\u0442\u0432';
+    payEl.textContent = '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e ' + formatInt(shortfall) + ' \u0442\u0435\u043d\u0433\u0435';
     payEl.className = 'r-val insufficient';
     divEl.textContent = '\u2014';
   } else {
@@ -904,7 +921,6 @@ function _calculate() {
 function doCalcNow() {
   updateTotalPremium();
   calculate();
-  saveState();
 }
 
 var SAVE_KEY = 'annuityCalcState';
@@ -948,6 +964,16 @@ function scheduleCalc() {
   calcTimer = setTimeout(doCalcNow, 180);
 }
 
+// На iOS/iPadOS частые записи в localStorage сильно тормозят UI.
+// Поэтому сохраняем состояние отложенно и не на каждую клавишу.
+var saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function() {
+    saveState();
+  }, 900);
+}
+
 function _fmt2(n) { return (n < 10 ? '0' : '') + n; }
 function formatDateDDMMYYYY(d) {
   return _fmt2(d.getDate()) + '.' + _fmt2(d.getMonth() + 1) + '.' + d.getFullYear();
@@ -965,8 +991,6 @@ function initApp() {
   appInitialized = true;
   loadState();
   try {
-    var verEl = document.getElementById('buildVer');
-    if (verEl) verEl.textContent = 'v1.2 (2026-04-15)';
     var toggle = document.getElementById('settingsToggle');
     if (toggle) toggle.addEventListener('click', function() {
       document.getElementById('settingsPanel').classList.toggle('open');
@@ -992,6 +1016,11 @@ function initApp() {
     for (var s = 0; s < allSelects.length; s++) {
       allSelects[s].addEventListener('change', scheduleCalc);
     }
+
+    // Автосохранение: на изменения и при уходе со страницы
+    document.addEventListener('input', scheduleSave, true);
+    document.addEventListener('change', scheduleSave, true);
+    window.addEventListener('pagehide', saveState);
   } catch(e) {}
 
   updateTotalPremium();
@@ -1039,12 +1068,20 @@ function buildResultText() {
   var pay = document.getElementById('annuityPayment').textContent || '';
   var div = document.getElementById('dividendPayment').textContent || '';
   var premium = document.getElementById('totalPremiumDisplay').textContent || '';
+  var shortfall = document.getElementById('shortfall') ? (document.getElementById('shortfall').textContent || '') : '';
   var birth = document.getElementById('birthDate').value || '';
   var calcD = document.getElementById('calcDate').value || '';
   var gender = document.getElementById('gender').value === 'male' ? 'Мужчина' : 'Женщина';
   var startD = document.getElementById('startDate').textContent || '';
   var age = document.getElementById('currentAge').textContent || '';
   var ageStart = document.getElementById('ageAtStart').textContent || '';
+  var indexDisp = document.getElementById('indexDisplay') ? (document.getElementById('indexDisplay').textContent || '') : '';
+  var indexRate = 0.08;
+  try {
+    var irEl = document.getElementById('indexationRate');
+    var ir = irEl ? parseFloat(irEl.value) : NaN;
+    if (!isNaN(ir)) indexRate = ir / 100;
+  } catch(e) {}
   var condition = document.getElementById('physicalCondition');
   var condText = condition.options[condition.selectedIndex].text;
   var insufficient = (pay.indexOf('Недостаточно') !== -1);
@@ -1059,21 +1096,62 @@ function buildResultText() {
     return s + ' г.';
   }
 
+  function monthsUntil(d1, d2) {
+    if (!d1 || !d2) return 0;
+    var n = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    if (d2.getDate() < d1.getDate()) n--;
+    return n < 0 ? 0 : n;
+  }
+  function sumMonthlyIndexed(monthlyFirst, months, rate) {
+    var total = 0;
+    for (var m = 0; m < months; m++) {
+      var y = Math.floor(m / 12);
+      total += monthlyFirst * Math.pow(1 + rate, y);
+    }
+    return Math.round(total);
+  }
+
   var lines = [];
-  lines.push('Пенсионный аннуитет - калькулятор');
+  lines.push('Пенсионный аннуитет - расчет от ' + addYearSuffix(calcD));
   lines.push('');
-  if (calcD) lines.push('📅 Дата расчёта: ' + addYearSuffix(calcD));
   lines.push('👤 ' + gender + ', ' + addYearSuffix(birth));
   lines.push('🎂 Возраст: ' + age);
   if (condText !== 'Без инвалидности') lines.push('♿ Инвалидность: ' + condText);
   lines.push('');
-  lines.push('💰 Премия: ' + premium + ' тг');
+  lines.push('💰 Сумма договора: ' + premium + ' тг');
   lines.push('📆 Начало выплат: ' + startD + ' (' + ageStart + ' лет)');
+  var gEl = document.getElementById('guaranteedPeriod');
+  var gYears = 0;
+  try { gYears = gEl ? (parseInt(gEl.value, 10) || 0) : 0; } catch(e) { gYears = 0; }
+  lines.push('🛡️ Гарантированный период: ' + (gYears > 0 ? (gYears + ' лет') : 'нет'));
   lines.push('');
   if (insufficient) {
-    lines.push('❌ Недостаточно средств');
+    lines.push('❌ Недостаточно ' + (shortfall || '0') + ' тенге');
   } else {
-    lines.push('✅ Ежемесячная выплата: ' + pay);
+    var payLine = '✅ Ежемесячная выплата: ' + pay + ' (пожизненно, индексация ' + (indexDisp || '8.0%') + ')';
+    lines.push(payLine);
+
+    // Сумма выплат за гарантированный период, с годовой индексацией
+    var mG = parseMoney(pay);
+    if (gYears > 0 && mG > 0) {
+      var totalG = sumMonthlyIndexed(mG, gYears * 12, indexRate);
+      lines.push('🧾 За гарантированный период компания выплатит: ' + formatInt(totalG) + ' тг');
+    }
+
+    // Сумма выплат до 63 лет (по дате начала выплат), с годовой индексацией
+    var bD = parseDateInput((birth || '').trim());
+    var sD = parseDate((startD || '').trim());
+    if (bD && sD) {
+      var pension63 = new Date(bD.getFullYear() + 63, bD.getMonth(), bD.getDate());
+      var months = monthsUntil(sD, pension63);
+      var m0 = parseMoney(pay);
+      if (months > 0 && m0 > 0) {
+        var totalTo63 = sumMonthlyIndexed(m0, months, indexRate);
+        lines.push('⏳ До пенсии получите ежемесячными выплатами: ' + formatInt(totalTo63) + ' тг');
+      } else {
+        lines.push('⏳ До пенсии получите ежемесячными выплатами: 0 тг');
+      }
+    }
     lines.push('🎁 Дивиденд: ' + div + ' (единовременно)');
   }
   return lines.join('\n');
