@@ -9,7 +9,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>Калькулятор пенсионного аннуитета — Казахстан</title>
+<title>Aslan — пенсионный аннуитет · калькулятор</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 :root {
@@ -61,8 +61,19 @@ body {
   top: 0;
   z-index: 100;
 }
-.header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
-.header .ver { font-size: 12px; opacity: .7; }
+.header h1.header-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  line-height: 1.2;
+}
+.header .header-brand { font-size: 16px; font-weight: 700; }
+.header .header-sub { font-size: 12px; font-weight: 600; opacity: 0.92; max-width: 260px; }
+.header .ver { font-size: 12px; opacity: .7; flex-shrink: 0; }
 
 /* ─── Cards ─── */
 .card {
@@ -247,6 +258,15 @@ body {
 .result-bar .r-spacer { flex: 1; }
 .result-bar .r-actions { display: flex; gap: 8px; align-items: center; }
 
+/* Touch-устройства (iPhone/iPad): убираем blur — меньше нагрузка на GPU */
+@media (hover: none) and (pointer: coarse) {
+  .result-bar {
+    background: #f2f2f7;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 .btn-icon {
   width: 36px; height: 36px;
   border-radius: 18px;
@@ -334,11 +354,17 @@ body.tg-webapp .result-text { color: var(--label); }
 /* ─── Telegram Web App ─── */
 body.tg-webapp .header { display: none; }
 body.tg-webapp { padding-bottom: 60px; }
-body.tg-webapp .result-bar { bottom: 0; }
+body.tg-webapp .result-bar {
+  bottom: 0;
+  background: #f2f2f7;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 /* ─── Mobile refinements ─── */
 @media (max-width: 700px) {
-  .header h1 { font-size: 15px; }
+  .header h1.header-title { font-size: 14px; }
+  .header .header-sub { max-width: 220px; }
   .card { margin: 8px 12px; border-radius: 10px; }
   .card-title { padding-left: 12px; margin: 0 12px; }
   .row { padding: 0 12px; }
@@ -353,7 +379,10 @@ body.tg-webapp .result-bar { bottom: 0; }
 <body>
 <div class="app">
   <div class="header">
-    <h1>Пенсионный аннуитет — РК</h1>
+    <h1 class="header-title">
+      <span class="header-brand">Aslan</span>
+      <span class="header-sub">Пенсионный аннуитет - калькулятор</span>
+    </h1>
     <span class="ver" id="buildVer">v1.2 (2026-04-15)</span>
   </div>
 
@@ -438,7 +467,7 @@ body.tg-webapp .result-bar { bottom: 0; }
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" style="display:none" aria-hidden="true">
         <div class="settings-btn" id="settingsToggle">Параметры расчёта</div>
         <div class="settings-body" id="settingsPanel">
           <div class="row">
@@ -534,12 +563,6 @@ body.tg-webapp .result-bar { bottom: 0; }
       </div>
 
       <div class="card">
-        <div class="fio-row">
-          <input type="text" id="insuredName" value="Клиент" placeholder="ФИО Застрахованного">
-        </div>
-      </div>
-
-      <div class="card">
         <div class="row">
           <label><b>Итог</b></label>
           <button class="btn-icon" onclick="copyResult()" title="Скопировать итог">📝</button>
@@ -569,7 +592,6 @@ body.tg-webapp .result-bar { bottom: 0; }
   <div class="r-actions">
     <button class="btn-icon" onclick="sendToTelegram()" title="Отправить в чат" id="tgSendBtn" style="display:none">📨</button>
     <button class="btn-icon" onclick="copyResult()" title="Скопировать итог" id="copyBtn">📝</button>
-    <button class="btn-icon" onclick="exportData()" title="Экспорт">📋</button>
   </div>
 </div>
 
@@ -611,13 +633,24 @@ function getQx(age, gender, condition, oppv) {
   var val = table[age];
   return val !== undefined ? val : 1.0;
 }
-function getMinAnnuityAge(gender, calcYear, oppv) {
+function _womenMinByYear(year) {
+  if (year >= 2031) return 55;
+  if (year < 2018) return 50;
+  var t = {2018:50.5,2019:51,2020:51.5,2021:52,2022:52.5,
+           2023:53,2024:53,2025:53,2026:53,2027:53,
+           2028:53.5,2029:54,2030:54.5};
+  return t[year] || 55;
+}
+function getMinAnnuityAge(gender, calcYear, oppv, birthYear) {
   if (oppv) return 50;
   if (gender === 'male') return 55;
-  if (calcYear >= 2027) return 55;
-  if (calcYear < 2018) return 50;
-  var ages = {2018:50.5,2019:51,2020:51.5,2021:52,2022:52.5,2023:53,2024:53,2025:53,2026:53};
-  return ages[calcYear] || 53;
+  for (var tryAge = 50; tryAge <= 55; tryAge++) {
+    var yearAtAge = birthYear + tryAge;
+    if (yearAtAge < calcYear) yearAtAge = calcYear;
+    var minForYear = _womenMinByYear(yearAtAge);
+    if (tryAge >= Math.ceil(minForYear)) return Math.ceil(minForYear);
+  }
+  return 55;
 }
 function computeAnnualFactor(startAge, gender, guaranteedYears, discountRate, indexationRate, condition, oppv) {
   var factor = 0, tpx = 1.0, maxT = OMEGA - startAge;
@@ -755,7 +788,7 @@ function _calculate() {
   var calcYear = calcDate.getFullYear();
   if (currentAge >= OMEGA || currentAge < 0) return;
 
-  var minAge = getMinAnnuityAge(gender, calcYear, oppv);
+  var minAge = getMinAnnuityAge(gender, calcYear, oppv, birthDate.getFullYear());
   var minAgeInt = Math.ceil(minAge);
   var deferralYears = 0, startAge = currentAge;
   var startPayDate = new Date(calcDate);
@@ -834,33 +867,6 @@ function _calculate() {
   updateResultText();
 }
 
-function exportData() {
-  var rows = [
-    ['Параметр','Значение'],
-    ['Дата расчета', document.getElementById('calcDate').value],
-    ['Дата рождения', document.getElementById('birthDate').value],
-    ['Пол', document.getElementById('gender').value === 'male' ? 'Мужчина' : 'Женщина'],
-    ['Гарант. период', document.getElementById('guaranteedPeriod').value],
-    ['Премия', document.getElementById('totalPremiumDisplay').textContent],
-    ['Возраст', document.getElementById('currentAge').textContent],
-    ['Начало выплат', document.getElementById('startDate').textContent],
-    ['Выплата', document.getElementById('annuityPayment').textContent],
-    ['Дивиденд', document.getElementById('dividendPayment').textContent],
-    ['ФИО', document.getElementById('insuredName').value]
-  ];
-  var csv = '\uFEFF';
-  for (var i = 0; i < rows.length; i++) {
-    csv += '"' + rows[i][0] + '";"' + rows[i][1] + '"\n';
-  }
-  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'annuity_' + document.getElementById('calcDate').value.replace(/\./g,'-') + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 /* Button handler (called from onclick in HTML) */
 function doCalcNow() {
   updateTotalPremium();
@@ -874,7 +880,7 @@ var SAVE_FIELDS = [
   'physicalCondition','mandatoryContrib','voluntaryContrib',
   'professionalContrib','ownFunds','surrenderFromOther',
   'fromOtherOPPV','oppvMonths','discountRate','indexationRate',
-  'dividendRate','expenseC','expenseD','livingWage','insuredName'
+  'dividendRate','expenseC','expenseD','livingWage'
 ];
 
 function saveState() {
@@ -906,10 +912,13 @@ function loadState() {
 var calcTimer = null;
 function scheduleCalc() {
   clearTimeout(calcTimer);
-  calcTimer = setTimeout(doCalcNow, 120);
+  calcTimer = setTimeout(doCalcNow, 180);
 }
 
+var appInitialized = false;
 function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
   loadState();
   try {
     var verEl = document.getElementById('buildVer');
@@ -982,7 +991,6 @@ function initTelegram() {
 }
 
 function buildResultText() {
-  var name = document.getElementById('insuredName').value || '';
   var pay = document.getElementById('annuityPayment').textContent || '';
   var div = document.getElementById('dividendPayment').textContent || '';
   var premium = document.getElementById('totalPremiumDisplay').textContent || '';
@@ -1007,9 +1015,8 @@ function buildResultText() {
   }
 
   var lines = [];
-  lines.push('📊 Пенсионный аннуитет');
+  lines.push('Пенсионный аннуитет - калькулятор');
   lines.push('');
-  if (name) lines.push('ФИО: ' + name);
   if (calcD) lines.push('📅 Дата расчёта: ' + addYearSuffix(calcD));
   lines.push('👤 ' + gender + ', ' + addYearSuffix(birth));
   lines.push('🎂 Возраст: ' + age);
@@ -1043,12 +1050,6 @@ function sendToTelegram() {
 
 function copyResult() {
   var text = buildResultText();
-  if (navigator.share) {
-    try {
-      navigator.share({ text: text });
-      return;
-    } catch(e) {}
-  }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() {
       alert('Итог скопирован');
@@ -1073,18 +1074,25 @@ function fallbackCopy(text) {
     document.body.removeChild(ta);
     alert('Итог скопирован');
   } catch(e) {
-    alert('Не удалось скопировать. Можно использовать Экспорт (📋).');
+    alert('Не удалось скопировать.');
   }
 }
 
-/* Multiple init fallbacks for iOS */
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  setTimeout(function() { initApp(); initTelegram(); }, 1);
-} else {
-  document.addEventListener('DOMContentLoaded', function() { initApp(); initTelegram(); });
+/* Одна инициализация: повторные вызовы навешивали обработчики и тормозили iOS */
+function bootOnce() {
+  initApp();
+  initTelegram();
 }
-window.addEventListener('load', function() { initApp(); initTelegram(); });
-window.addEventListener('pageshow', function() { updateTotalPremium(); calculate(); });
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootOnce);
+} else {
+  setTimeout(bootOnce, 0);
+}
+window.addEventListener('pageshow', function() {
+  updateTotalPremium();
+  calculate();
+  updateResultText();
+});
 </script>
 </body>
 </html>
