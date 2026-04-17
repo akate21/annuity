@@ -282,6 +282,41 @@ body {
 }
 .btn-icon:active { opacity: 0.6; }
 
+.btn-secondary {
+  border: 0.5px solid var(--separator);
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+.btn-secondary:active { opacity: 0.7; }
+.btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + var(--safe-bottom));
+  z-index: 999;
+  background: rgba(28,28,30,0.92);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  max-width: min(520px, calc(100vw - 24px));
+  text-align: center;
+  display: none;
+}
+
 .btn-copy-text {
   border: 0.5px solid var(--separator);
   background: rgba(255,255,255,0.85);
@@ -544,6 +579,10 @@ body.tg-webapp .result-bar {
           <label><b>Недостаток средств</b></label>
           <span class="val highlight" id="shortfall" style="font-size:15px">—</span>
         </div>
+        <div class="row" id="bonusRow" style="display:none">
+          <label class="small">добрать за счёт бонуса</label>
+          <button class="btn-secondary" id="useBonusBtn" type="button" onclick="applyBonusToCoverShortfall()">Добрать за счет бонуса</button>
+        </div>
       </div>
 
       <div class="card">
@@ -614,6 +653,8 @@ body.tg-webapp .result-bar {
   </div>
 </div>
 
+<div class="toast" id="toast">—</div>
+
 <script>
 /* ═══════════ Mortality Tables ═══════════ */
 var QX_MALE={45:0.00506324,46:0.00541322,47:0.00578732,48:0.00618720,49:0.00661461,50:0.00707133,51:0.00755957,52:0.00808139,53:0.00856150,54:0.00911608,55:0.00974127,56:0.01043421,57:0.01119231,58:0.01212124,59:0.01305795,60:0.01400278,61:0.01501191,62:0.01596719,63:0.01692128,64:0.01787294,65:0.01882189,66:0.01976891,67:0.02067111,68:0.02161884,69:0.02256598,70:0.02351273,71:0.02551640,72:0.02781936,73:0.03048121,74:0.03357435,75:0.03718733,76:0.03942173,77:0.04240343,78:0.04527532,79:0.04833681,80:0.05159970,81:0.05507533,82:0.05877769,83:0.06272054,84:0.06691831,85:0.07138613,86:0.07613984,87:0.08119598,88:0.08657181,89:0.09325468,90:0.10149249,91:0.11160518,92:0.12400550,93:0.13922717,94:0.15632075,95:0.17551690,96:0.19707469,97:0.22128032,98:0.24847002,99:0.27900683,100:0.31330354,101:0.35182396,102:0.39508920,103:0.44368478,104:0.49826864,105:0.55958003,106:0.62844965,107:0.70582143,108:0.79272471,109:0.87892804,110:1.0};
@@ -627,6 +668,58 @@ var QX_G1_FEMALE={45:0.07560385,46:0.08003065,47:0.08471665,48:0.09134038,49:0.0
 var QX_OPPV_MALE={45:0.01003465,46:0.01063079,47:0.01126233,48:0.01215709,49:0.01312293,50:0.01416551,51:0.01529092,52:0.01650573,53:0.01762208,54:0.01881394,55:0.02008641,56:0.02144494,57:0.02289535,58:0.02420524,59:0.02559008,60:0.02705414,61:0.02860196,62:0.03023834,63:0.03237041,64:0.03465281,65:0.03709614,66:0.03971174,67:0.04251177,68:0.04728883,69:0.05260268,70:0.05851365,71:0.06508885,72:0.07240289,73:0.07592568,74:0.08036948,75:0.08429908,76:0.0890089,77:0.09402669,78:0.09959795,79:0.10595566,80:0.1119813,81:0.11826492,82:0.12746316,83:0.13892526,84:0.1446697,85:0.15538105,86:0.1631501,87:0.17130747,88:0.1798728,89:0.18886662,90:0.19830946,91:0.21863682,92:0.24104683,93:0.26575461,94:0.29299406,95:0.32302582,96:0.35613646,97:0.39264021,98:0.4328852,99:0.47725619,100:0.52617542};
 var QX_OPPV_FEMALE={45:0.00501733,46:0.00531539,47:0.00563117,48:0.00607855,49:0.00656147,50:0.00708275,51:0.00764546,52:0.00825287,53:0.00881104,54:0.00940697,55:0.0100432,56:0.01072247,57:0.01144767,58:0.01210262,59:0.01279504,60:0.01352707,61:0.01430098,62:0.01511917,63:0.01618521,64:0.01732641,65:0.01854807,66:0.01985587,67:0.02125588,68:0.02364441,69:0.02630134,70:0.02925683,71:0.03254442,72:0.03620145,73:0.03796284,74:0.04018474,75:0.04214954,76:0.04450445,77:0.04701334,78:0.04979897,79:0.05297783,80:0.05599065,81:0.05913246,82:0.06373158,83:0.06946263,84:0.07233485,85:0.07769052,86:0.08157505,87:0.08565373,88:0.0899364,89:0.09443331,90:0.09915473,91:0.10931841,92:0.12052342,93:0.13287731,94:0.14649703,95:0.16151291,96:0.17806823,97:0.1963201,98:0.2164426,99:0.2386281,100:0.26308771};
 var OMEGA = 111;
+// Бонус (дивиденд), направленный в сумму договора
+var BONUS_APPLIED = 0;
+var _suppressBonusReset = false;
+var _toastTimer = null;
+
+function showToast(msg) {
+  try {
+    var el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function() {
+      el.style.display = 'none';
+    }, 1000);
+  } catch(e) {}
+}
+
+function _getVoluntaryNoBonus() {
+  var el = document.getElementById('voluntaryContrib');
+  var v = el ? parseMoney(el.value) : 0;
+  return Math.max(0, v - (BONUS_APPLIED || 0));
+}
+
+function applyBonusToCoverShortfall() {
+  try {
+    // Пересчитываем актуальные значения на момент клика
+    var dividendRate = parseFloat(document.getElementById('dividendRate').value) / 100;
+    var totalPremium = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
+      + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
+      + getMoneyVal('surrenderFromOther');
+    var basePremium = Math.max(0, totalPremium - (BONUS_APPLIED || 0));
+    var bonusTotal = (basePremium > 0) ? Math.round(basePremium * dividendRate) : 0;
+    var shortfallNow = parseMoney((document.getElementById('shortfall') || {}).textContent || '0');
+    if (shortfallNow <= 0 || bonusTotal <= 0) return;
+
+    var add = Math.min(shortfallNow, bonusTotal);
+    if (add <= 0) return;
+
+    var volEl = document.getElementById('voluntaryContrib');
+    if (!volEl) return;
+    var volNoBonus = _getVoluntaryNoBonus();
+
+    BONUS_APPLIED = add;
+    _suppressBonusReset = true;
+    volEl.value = formatMoney(volNoBonus + BONUS_APPLIED);
+    _suppressBonusReset = false;
+
+    doCalcNow();
+    showToast('Сумма внесена в Добровольные взносы');
+  } catch(e) {}
+}
 
 function checkOPPV() {
   var fromOther = document.getElementById('fromOtherOPPV').value;
@@ -741,6 +834,16 @@ function initMoneyInput(el) {
   function calc() {
     // iOS Safari иногда «теряет» отложенный пересчёт; сумму обновляем сразу
     updateTotalPremium();
+    // Если пользователь меняет суммы вручную — сбрасываем применённый бонус,
+    // чтобы не держать "приклеенную" надбавку.
+    if (!_suppressBonusReset && BONUS_APPLIED > 0) {
+      try {
+        // Любое ручное изменение премии сбрасывает бонус
+        if (el && (el.id === 'mandatoryContrib' || el.id === 'voluntaryContrib' || el.id === 'professionalContrib' || el.id === 'ownFunds' || el.id === 'surrenderFromOther')) {
+          BONUS_APPLIED = 0;
+        }
+      } catch(e) {}
+    }
     // Авто-стаж ОППВ = 60 при проф. взносах
     if (el && el.id === 'professionalContrib') {
       try {
@@ -884,7 +987,10 @@ function _calculate() {
   var minPen = Math.ceil(0.70 * livingWage);
   var minRequiredPremium = Math.ceil(grossFactor * minPen * 12);
   var shortfall = Math.max(0, minRequiredPremium - totalPremium);
-  var annualDividend = (totalPremium > 0) ? Math.round(totalPremium * dividendRate) : 0;
+  // Бонус считаем от суммы договора БЕЗ учёта уже применённого бонуса,
+  // чтобы не возникало "саморазгона" (бонус не увеличивает сам себя).
+  var basePremium = Math.max(0, totalPremium - (BONUS_APPLIED || 0));
+  var annualDividend = (basePremium > 0) ? Math.round(basePremium * dividendRate) : 0;
 
   var surrender2ySufficient = '\u041d\u0435\u0442';
   if (totalPremium > 0 && startAge + 2 < OMEGA) {
@@ -924,6 +1030,13 @@ function _calculate() {
 
   var payEl = document.getElementById('annuityPayment');
   var divEl = document.getElementById('dividendPayment');
+  var bonusRow = document.getElementById('bonusRow');
+  var bonusBtn = document.getElementById('useBonusBtn');
+  if (bonusRow) bonusRow.style.display = (shortfall > 0 && annualDividend > 0) ? '' : 'none';
+  if (bonusBtn) {
+    var remainingBonus = Math.max(0, annualDividend - (BONUS_APPLIED || 0));
+    bonusBtn.disabled = !(shortfall > 0 && remainingBonus > 0);
+  }
   if (shortfall > 0) {
     payEl.textContent = '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e ' + formatInt(shortfall) + ' \u0442\u0435\u043d\u0433\u0435';
     payEl.className = 'r-val insufficient';
@@ -1137,7 +1250,12 @@ function buildResultText() {
   lines.push('🎂 Возраст: ' + age);
   if (condText !== 'Без инвалидности') lines.push('♿ Инвалидность: ' + condText);
   lines.push('');
-  lines.push('💰 Сумма договора: ' + premium + ' тг');
+  var applied = Math.max(0, BONUS_APPLIED || 0);
+  if (applied > 0) {
+    lines.push('💰 Сумма договора: ' + premium + ' тг (включая ' + formatInt(applied) + ' тенге за счет бонуса)');
+  } else {
+    lines.push('💰 Сумма договора: ' + premium + ' тг');
+  }
   lines.push('📆 Начало выплат: ' + startD + ' (' + ageStart + ' лет)');
   var gEl = document.getElementById('guaranteedPeriod');
   var gYears = 0;
@@ -1170,7 +1288,16 @@ function buildResultText() {
         lines.push('⏳ До пенсии получите ежемесячными выплатами: 0 тг');
       }
     }
-    lines.push('🎁 Дивиденд: ' + div + ' (единовременно)');
+    var fullDiv = Math.max(0, parseMoney(div));
+    var inContract = Math.min(applied, fullDiv);
+    var cash = Math.max(0, fullDiv - inContract);
+    if (fullDiv > 0 && applied > 0) {
+      lines.push('🎁 Дивиденд: ' + formatInt(fullDiv) + ' тг (единовременно)');
+      lines.push('   - ' + formatInt(inContract) + ' тг — в счет суммы договора');
+      lines.push('   - ' + formatInt(cash) + ' тг — на руки');
+    } else {
+      lines.push('🎁 Дивиденд: ' + div + ' (единовременно)');
+    }
   }
   return lines.join('\n');
 }
