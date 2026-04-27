@@ -161,8 +161,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .row input.date-input {
-  width: 120px;
-  text-align: center;
+  width: 140px;
+  text-align: right;
   letter-spacing: 0.3px;
 }
 .row input.money-input {
@@ -497,6 +497,10 @@ body.tg-webapp .result-bar {
           <label class="small">собственные средства</label>
           <input type="text" id="ownFunds" class="money-input" value="0" inputmode="numeric">
         </div>
+        <div class="row sub">
+          <label class="small">добавление за счёт бонуса</label>
+          <input type="text" id="bonusContrib" class="money-input" value="0" inputmode="numeric">
+        </div>
         <div class="row">
           <label class="small">Выкупная из иных КСЖ</label>
           <input type="text" id="surrenderFromOther" class="money-input" value="0" inputmode="numeric">
@@ -668,9 +672,8 @@ var QX_G1_FEMALE={45:0.07560385,46:0.08003065,47:0.08471665,48:0.09134038,49:0.0
 var QX_OPPV_MALE={45:0.01003465,46:0.01063079,47:0.01126233,48:0.01215709,49:0.01312293,50:0.01416551,51:0.01529092,52:0.01650573,53:0.01762208,54:0.01881394,55:0.02008641,56:0.02144494,57:0.02289535,58:0.02420524,59:0.02559008,60:0.02705414,61:0.02860196,62:0.03023834,63:0.03237041,64:0.03465281,65:0.03709614,66:0.03971174,67:0.04251177,68:0.04728883,69:0.05260268,70:0.05851365,71:0.06508885,72:0.07240289,73:0.07592568,74:0.08036948,75:0.08429908,76:0.0890089,77:0.09402669,78:0.09959795,79:0.10595566,80:0.1119813,81:0.11826492,82:0.12746316,83:0.13892526,84:0.1446697,85:0.15538105,86:0.1631501,87:0.17130747,88:0.1798728,89:0.18886662,90:0.19830946,91:0.21863682,92:0.24104683,93:0.26575461,94:0.29299406,95:0.32302582,96:0.35613646,97:0.39264021,98:0.4328852,99:0.47725619,100:0.52617542};
 var QX_OPPV_FEMALE={45:0.00501733,46:0.00531539,47:0.00563117,48:0.00607855,49:0.00656147,50:0.00708275,51:0.00764546,52:0.00825287,53:0.00881104,54:0.00940697,55:0.0100432,56:0.01072247,57:0.01144767,58:0.01210262,59:0.01279504,60:0.01352707,61:0.01430098,62:0.01511917,63:0.01618521,64:0.01732641,65:0.01854807,66:0.01985587,67:0.02125588,68:0.02364441,69:0.02630134,70:0.02925683,71:0.03254442,72:0.03620145,73:0.03796284,74:0.04018474,75:0.04214954,76:0.04450445,77:0.04701334,78:0.04979897,79:0.05297783,80:0.05599065,81:0.05913246,82:0.06373158,83:0.06946263,84:0.07233485,85:0.07769052,86:0.08157505,87:0.08565373,88:0.0899364,89:0.09443331,90:0.09915473,91:0.10931841,92:0.12052342,93:0.13287731,94:0.14649703,95:0.16151291,96:0.17806823,97:0.1963201,98:0.2164426,99:0.2386281,100:0.26308771};
 var OMEGA = 111;
-// Бонус (дивиденд), направленный в сумму договора
-var BONUS_APPLIED = 0;
-var _suppressBonusReset = false;
+// Доля бонуса, которую можно направить в сумму договора (от необходимой премии)
+var BONUS_MAX_RATE = 0.11;
 var _toastTimer = null;
 
 function showToast(msg) {
@@ -686,38 +689,36 @@ function showToast(msg) {
   } catch(e) {}
 }
 
-function _getVoluntaryNoBonus() {
-  var el = document.getElementById('voluntaryContrib');
-  var v = el ? parseMoney(el.value) : 0;
-  return Math.max(0, v - (BONUS_APPLIED || 0));
+function getMaxBonus() {
+  // Максимум, который можно направить за счёт бонуса = 11% от необходимой
+  // премии для актуального расчёта. Без актуального расчёта — 0.
+  var minReq = parseInt(document.body.getAttribute('data-min-required') || '0', 10) || 0;
+  if (minReq <= 0) return 0;
+  return Math.floor(minReq * BONUS_MAX_RATE);
 }
 
 function applyBonusToCoverShortfall() {
   try {
-    // Пересчитываем актуальные значения на момент клика
-    var dividendRate = parseFloat(document.getElementById('dividendRate').value) / 100;
-    var totalPremium = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
-      + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
-      + getMoneyVal('surrenderFromOther');
-    var basePremium = Math.max(0, totalPremium - (BONUS_APPLIED || 0));
-    var bonusTotal = (basePremium > 0) ? Math.round(basePremium * dividendRate) : 0;
+    var bonusEl = document.getElementById('bonusContrib');
+    if (!bonusEl) return;
+    var maxBonus = getMaxBonus();
+    if (maxBonus <= 0) return;
+    var current = getMoneyVal('bonusContrib');
     var shortfallNow = parseMoney((document.getElementById('shortfall') || {}).textContent || '0');
-    if (shortfallNow <= 0 || bonusTotal <= 0) return;
-
-    var add = Math.min(shortfallNow, bonusTotal);
+    var room = Math.max(0, maxBonus - current);
+    if (room <= 0) return;
+    // Берём столько, сколько нужно для покрытия недостатка, но не больше 11% от необходимой суммы.
+    // Если лимит позволяет — округляем добор вверх до следующей тысячи.
+    var add = room;
+    if (shortfallNow > 0) {
+      var need = Math.min(shortfallNow, room);
+      var roundedNeed = Math.ceil(shortfallNow / 1000) * 1000;
+      add = (roundedNeed <= room) ? roundedNeed : need;
+    }
     if (add <= 0) return;
-
-    var volEl = document.getElementById('voluntaryContrib');
-    if (!volEl) return;
-    var volNoBonus = _getVoluntaryNoBonus();
-
-    BONUS_APPLIED = add;
-    _suppressBonusReset = true;
-    volEl.value = formatMoney(volNoBonus + BONUS_APPLIED);
-    _suppressBonusReset = false;
-
+    bonusEl.value = formatMoney(current + add);
     doCalcNow();
-    showToast('Сумма внесена в Добровольные взносы');
+    showToast('Сумма внесена в «Добавление за счёт бонуса»');
   } catch(e) {}
 }
 
@@ -824,26 +825,74 @@ function formatMoney(n) {
 }
 
 function selectAllOnFocus(el) {
+  // 1-й клик/тап: выделить всё
+  // 2-й клик/тап (когда уже в фокусе): поставить курсор точечно
+  var justFocused = false;
   el.addEventListener('focus', function() {
     var inp = this;
-    try { setTimeout(function() { inp.select(); }, 50); } catch(e) {}
+    justFocused = true;
+    try { setTimeout(function() { inp.select(); }, 30); } catch(e) {}
   });
+  el.addEventListener('blur', function() {
+    justFocused = false;
+  });
+  // Не даём первому mouseup/touchend снять выделение, сделанное на focus.
+  function eatFirstPointerEnd(e) {
+    if (!justFocused) return;
+    try { e.preventDefault(); } catch(_) {}
+    justFocused = false;
+  }
+  el.addEventListener('mouseup', eatFirstPointerEnd);
+  el.addEventListener('touchend', eatFirstPointerEnd);
+  // Любая клавиатурная навигация/ввод отключает "режим первого клика"
+  el.addEventListener('keydown', function() { justFocused = false; });
+  el.addEventListener('input', function() { justFocused = false; });
 }
 
 function initMoneyInput(el) {
+  var _formatting = false;
+  function _formatMoneyLive(inp) {
+    if (_formatting) return;
+    _formatting = true;
+    try {
+      var start = inp.selectionStart;
+      var old = String(inp.value || '');
+
+      // Сколько цифр было слева от курсора
+      var digitsLeft = 0;
+      if (start !== null && start !== undefined) {
+        for (var i = 0; i < Math.min(start, old.length); i++) {
+          var ch = old.charAt(i);
+          if (ch >= '0' && ch <= '9') digitsLeft++;
+        }
+      }
+
+      // Оставляем только цифры
+      var digits = old.replace(/[^\d]/g, '');
+      // Нормализуем ведущие нули
+      digits = digits.replace(/^0+(?=\d)/, '');
+
+      var formatted = digits ? formatMoney(parseInt(digits, 10) || 0) : '0';
+      if (formatted !== old) inp.value = formatted;
+
+      // Восстанавливаем курсор: ставим после того же количества цифр
+      if (start !== null && start !== undefined) {
+        var pos = 0, seen = 0;
+        while (pos < inp.value.length && seen < digitsLeft) {
+          var c = inp.value.charAt(pos);
+          if (c >= '0' && c <= '9') seen++;
+          pos++;
+        }
+        try { inp.setSelectionRange(pos, pos); } catch(e) {}
+      }
+    } catch(e) {
+      // no-op
+    }
+    _formatting = false;
+  }
   function calc() {
     // iOS Safari иногда «теряет» отложенный пересчёт; сумму обновляем сразу
     updateTotalPremium();
-    // Если пользователь меняет суммы вручную — сбрасываем применённый бонус,
-    // чтобы не держать "приклеенную" надбавку.
-    if (!_suppressBonusReset && BONUS_APPLIED > 0) {
-      try {
-        // Любое ручное изменение премии сбрасывает бонус
-        if (el && (el.id === 'mandatoryContrib' || el.id === 'voluntaryContrib' || el.id === 'professionalContrib' || el.id === 'ownFunds' || el.id === 'surrenderFromOther')) {
-          BONUS_APPLIED = 0;
-        }
-      } catch(e) {}
-    }
     // Авто-стаж ОППВ = 60 при проф. взносах
     if (el && el.id === 'professionalContrib') {
       try {
@@ -857,11 +906,22 @@ function initMoneyInput(el) {
     }
     scheduleCalc();
   }
-  el.addEventListener('input', calc);
+  el.addEventListener('input', function() {
+    _formatMoneyLive(el);
+    calc();
+  });
   el.addEventListener('keyup', calc);
   el.addEventListener('change', calc);
   el.addEventListener('blur', function() {
     var raw = parseMoney(el.value);
+    // Поле "добавление за счёт бонуса" ограничиваем 11% от необходимой суммы
+    if (el.id === 'bonusContrib') {
+      var maxBonus = getMaxBonus();
+      if (maxBonus > 0 && raw > maxBonus) {
+        raw = maxBonus;
+        showToast('Максимум за счёт бонуса: ' + formatMoney(maxBonus) + ' тг');
+      }
+    }
     el.value = formatMoney(raw);
     calc();
   });
@@ -891,7 +951,7 @@ function getMoneyVal(id) {
 function updateTotalPremium() {
   var total = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
     + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
-    + getMoneyVal('surrenderFromOther');
+    + getMoneyVal('bonusContrib') + getMoneyVal('surrenderFromOther');
   var el = document.getElementById('totalPremiumDisplay');
   if (el) el.textContent = formatMoney(total);
 }
@@ -923,9 +983,10 @@ function _calculate() {
   var condition = document.getElementById('physicalCondition').value;
   var oppv = checkOPPV();
 
+  var bonusContrib = getMoneyVal('bonusContrib');
   var totalPremium = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
     + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
-    + getMoneyVal('surrenderFromOther');
+    + bonusContrib + getMoneyVal('surrenderFromOther');
 
   var calcDate = parseDate(calcDateStr);
   var birthDate = parseDate(birthDateStr);
@@ -986,11 +1047,25 @@ function _calculate() {
   var periodicPayment = Math.round(annualPayment / 12 * indexFirst);
   var minPen = Math.ceil(0.70 * livingWage);
   var minRequiredPremium = Math.ceil(grossFactor * minPen * 12);
+
+  // Ограничиваем добавление за счёт бонуса 11% от необходимой премии
+  var maxBonus = Math.floor(minRequiredPremium * BONUS_MAX_RATE);
+  if (bonusContrib > maxBonus) {
+    bonusContrib = maxBonus;
+    var bEl = document.getElementById('bonusContrib');
+    if (bEl) bEl.value = formatMoney(bonusContrib);
+    totalPremium = getMoneyVal('mandatoryContrib') + getMoneyVal('voluntaryContrib')
+      + getMoneyVal('professionalContrib') + getMoneyVal('ownFunds')
+      + bonusContrib + getMoneyVal('surrenderFromOther');
+    var tEl = document.getElementById('totalPremiumDisplay');
+    if (tEl) tEl.textContent = formatMoney(totalPremium);
+  }
+  // Запоминаем актуальную необходимую сумму, чтобы кнопка/клампы могли использовать её вне _calculate
+  document.body.setAttribute('data-min-required', String(minRequiredPremium));
+
   var shortfall = Math.max(0, minRequiredPremium - totalPremium);
-  // Бонус считаем от суммы договора БЕЗ учёта уже применённого бонуса,
-  // чтобы не возникало "саморазгона" (бонус не увеличивает сам себя).
-  var basePremium = Math.max(0, totalPremium - (BONUS_APPLIED || 0));
-  var annualDividend = (basePremium > 0) ? Math.round(basePremium * dividendRate) : 0;
+  // Дивиденд считается от совокупной премии (суммы договора).
+  var annualDividend = (totalPremium > 0) ? Math.round(totalPremium * dividendRate) : 0;
 
   var surrender2ySufficient = '\u041d\u0435\u0442';
   if (totalPremium > 0 && startAge + 2 < OMEGA) {
@@ -1032,11 +1107,9 @@ function _calculate() {
   var divEl = document.getElementById('dividendPayment');
   var bonusRow = document.getElementById('bonusRow');
   var bonusBtn = document.getElementById('useBonusBtn');
-  if (bonusRow) bonusRow.style.display = (shortfall > 0 && annualDividend > 0) ? '' : 'none';
-  if (bonusBtn) {
-    var remainingBonus = Math.max(0, annualDividend - (BONUS_APPLIED || 0));
-    bonusBtn.disabled = !(shortfall > 0 && remainingBonus > 0);
-  }
+  var bonusRoom = Math.max(0, maxBonus - bonusContrib);
+  if (bonusRow) bonusRow.style.display = (shortfall > 0 && bonusRoom > 0) ? '' : 'none';
+  if (bonusBtn) bonusBtn.disabled = !(shortfall > 0 && bonusRoom > 0);
   if (shortfall > 0) {
     payEl.textContent = '\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043e\u0447\u043d\u043e ' + formatInt(shortfall) + ' \u0442\u0435\u043d\u0433\u0435';
     payEl.className = 'r-val insufficient';
@@ -1059,7 +1132,7 @@ var SAVE_KEY = 'annuityCalcState';
 var SAVE_FIELDS = [
   'calcDate','birthDate','gender','annuityType','guaranteedPeriod',
   'physicalCondition','mandatoryContrib','voluntaryContrib',
-  'professionalContrib','ownFunds','surrenderFromOther',
+  'professionalContrib','ownFunds','bonusContrib','surrenderFromOther',
   'fromOtherOPPV','oppvMonths','discountRate','indexationRate',
   'dividendRate','expenseC','expenseD','livingWage'
 ];
@@ -1248,15 +1321,25 @@ function buildResultText() {
   lines.push('');
   lines.push('👤 ' + gender + ', ' + addYearSuffix(birth));
   lines.push('🎂 Возраст: ' + age);
-  if (condText !== 'Без инвалидности') lines.push('♿ Инвалидность: ' + condText);
+  if (condText !== 'Без инвалидности') lines.push('🦾 Инвалидность: ' + condText);
   lines.push('');
-  var applied = Math.max(0, BONUS_APPLIED || 0);
-  if (applied > 0) {
-    lines.push('💰 Сумма договора: ' + premium + ' тг (включая ' + formatInt(applied) + ' тенге за счет бонуса)');
-  } else {
-    lines.push('💰 Сумма договора: ' + premium + ' тг');
+  var applied = Math.max(0, getMoneyVal('bonusContrib'));
+  // Если средств недостаточно — показываем необходимую сумму выше "Суммы договора"
+  if (insufficient) {
+    var minReq = parseInt(document.body.getAttribute('data-min-required') || '0', 10) || 0;
+    if (minReq > 0) {
+      lines.push('🎯 Сумма необходимая для заключения договора: ' + formatInt(minReq) + ' тг');
+    }
   }
-  lines.push('📆 Начало выплат: ' + startD + ' (' + ageStart + ' лет)');
+  var premiumLabel = insufficient ? 'Сумма перевода' : 'Сумма договора';
+  if (applied > 0) {
+    lines.push('💰 ' + premiumLabel + ': ' + premium + ' тг (включая ' + formatInt(applied) + ' тенге за счет бонуса)');
+  } else {
+    lines.push('💰 ' + premiumLabel + ': ' + premium + ' тг');
+  }
+  if (!insufficient) {
+    lines.push('📆 Начало выплат: ' + startD + ' (' + ageStart + ' лет)');
+  }
   var gEl = document.getElementById('guaranteedPeriod');
   var gYears = 0;
   try { gYears = gEl ? (parseInt(gEl.value, 10) || 0) : 0; } catch(e) { gYears = 0; }
@@ -1289,8 +1372,12 @@ function buildResultText() {
       }
     }
     var fullDiv = Math.max(0, parseMoney(div));
+    var maxBonus = getMaxBonus();
+    var isBonusLimitExhausted = (maxBonus > 0 && applied >= maxBonus);
+    // В счет суммы договора = "Добавление за счёт бонуса"
     var inContract = Math.min(applied, fullDiv);
-    var cash = Math.max(0, fullDiv - inContract);
+    // Если лимит 11% исчерпан — на руки 0
+    var cash = isBonusLimitExhausted ? 0 : Math.max(0, fullDiv - inContract);
     if (fullDiv > 0 && applied > 0) {
       lines.push('🎁 Дивиденд: ' + formatInt(fullDiv) + ' тг (единовременно)');
       lines.push('   - ' + formatInt(inContract) + ' тг — в счет суммы договора');
