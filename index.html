@@ -1366,17 +1366,20 @@ function buildResultText() {
       var m0 = parseMoney(pay);
       if (months > 0 && m0 > 0) {
         var totalTo63 = sumMonthlyIndexed(m0, months, indexRate);
-        lines.push('⏳ До пенсии получите ежемесячными выплатами: ' + formatInt(totalTo63) + ' тг');
-      } else {
-        lines.push('⏳ До пенсии получите ежемесячными выплатами: 0 тг');
+        if (totalTo63 > 0) {
+          lines.push('⏳ До пенсии получите ежемесячными выплатами: ' + formatInt(totalTo63) + ' тг');
+        }
       }
     }
     var fullDiv = Math.max(0, parseMoney(div));
-    var maxBonus = getMaxBonus();
-    var isBonusLimitExhausted = (maxBonus > 0 && applied >= maxBonus);
-    // В счет суммы договора = "Добавление за счёт бонуса"
-    var inContract = Math.min(applied, fullDiv);
-    // Если лимит 11% исчерпан — на руки 0
+    // Лимит 11% по бонусу: считаем maxBonus от текущего minRequired (без зависимости от тайминга).
+    var minReqAttr = parseInt(document.body.getAttribute('data-min-required') || '0', 10) || 0;
+    var maxBonus = (minReqAttr > 0) ? Math.floor(minReqAttr * 0.11) : 0;
+    // С небольшим допуском (1 тг), чтобы не страдать от округлений.
+    var isBonusLimitExhausted = (maxBonus > 0 && applied + 1 >= maxBonus);
+    // В счет суммы договора = "Добавление за счёт бонуса". Если лимит 11% исчерпан —
+    // весь дивиденд уходит в счёт договора, на руки 0.
+    var inContract = isBonusLimitExhausted ? fullDiv : Math.min(applied, fullDiv);
     var cash = isBonusLimitExhausted ? 0 : Math.max(0, fullDiv - inContract);
     if (fullDiv > 0 && applied > 0) {
       lines.push('🎁 Дивиденд: ' + formatInt(fullDiv) + ' тг (единовременно)');
